@@ -1,65 +1,168 @@
 const operations = document.querySelectorAll(".operation");
-const display = document.querySelector("#display"); // ✅ fixed typo
-let equation = "";
+        const numbers = document.querySelectorAll(".btn:not(.operation)");
+        const display = document.querySelector("#display");
+        const clearBtn = document.querySelector("#delete");
+        
+        let equation = "";
+        let symbol = null;
+        let number1 = null;
+        let number2 = null;
+        let waitingForOperand = false;
+        let justCalculated = false;
 
-operations.forEach(op => {
-    op.addEventListener("click", (e) => {
-        setDisplay(e.target.textContent);
-    });
-});
+        // Add event listeners for all buttons
+        operations.forEach(op => {
+            op.addEventListener("click", (e) => {
+                setDisplay(e.target.textContent);
+            });
+        });
 
-function setDisplay(char){
-    
-    if(legitamacy(char)){
+        numbers.forEach(num => {
+            num.addEventListener("click", (e) => {
+                setDisplay(e.target.textContent);
+            });
+        });
 
-        display.textContent += char;
-        equation += char; 
-    }
-    
-}
+        clearBtn.addEventListener("click", () => {
+            clearCalculator();
+        });
 
-function legitamacy(char){
-    
-    if(checkOperator(char) && equation.length < 1){
-        console.log("Check 1");
-        return false;
-    }else if(checkOperator(equation[equation.length - 1]) && checkOperator(char)){
-        console.log("Check 2");
+        function setDisplay(char) {
+            // If we just calculated and user enters a number, start fresh
+            if (justCalculated && !isNaN(char) && char !== '.') {
+                clearCalculator();
+                justCalculated = false;
+            }
 
-        return false;
-    }else{
-                console.log("Check 3");
+            if (char === '.') {
+                handleDecimal();
+            } else if (!isNaN(char)) {
+                handleNumber(char);
+            } else if (checkOperator(char)) {
+                handleOperator(char);
+            } else if (char === '=') {
+                handleEquals();
+            }
+        }
 
-        return true;
-    }
-}
+        function handleNumber(num) {
+            if (waitingForOperand) {
+                display.textContent = num;
+                waitingForOperand = false;
+            } else {
+                display.textContent = display.textContent === '0' ? num : display.textContent + num;
+            }
+            justCalculated = false;
+        }
 
-function checkOperator(char){
-    switch(char){
-        case "+":
-        case "-":
-        case "x":
-        case "/":
-            return true;
-            break;
-        default:
-            return false;
-    }
-}
+        function handleDecimal() {
+            if (waitingForOperand) {
+                display.textContent = '0.';
+                waitingForOperand = false;
+            } else if (display.textContent.indexOf('.') === -1) {
+                display.textContent += '.';
+            }
+            justCalculated = false;
+        }
 
-function add(a , b){
-    return a + b;
-}
+        function handleOperator(nextOperator) {
+            const inputValue = parseFloat(display.textContent);
 
-function subtract(a , b){
-    return a - b;
-}
+            if (number1 === null) {
+                number1 = inputValue;
+            } else if (symbol && !waitingForOperand) {
+                number2 = inputValue;
+                const result = operate(symbol, number1, number2);
+                
+                if (result === "Error") {
+                    display.textContent = "Nice try, smarty pants! 🤓";
+                    number1 = null;
+                    number2 = null;
+                    symbol = null;
+                    waitingForOperand = true;
+                    return;
+                }
+                
+                display.textContent = roundResult(result);
+                number1 = result;
+                number2 = null;
+            }
 
-function multiply(a , b){
-    return a * b;
-}
+            waitingForOperand = true;
+            symbol = nextOperator;
+            justCalculated = false;
+        }
 
-function divide(a , b){
-    return a / b;
-}
-}
+        function handleEquals() {
+            const inputValue = parseFloat(display.textContent);
+
+            if (number1 !== null && symbol && !waitingForOperand) {
+                number2 = inputValue;
+                const result = operate(symbol, number1, number2);
+                
+                if (result === "Error") {
+                    display.textContent = "Nice try, smarty pants! 🤓";
+                    clearCalculator();
+                    return;
+                }
+                
+                display.textContent = roundResult(result);
+                number1 = null;
+                number2 = null;
+                symbol = null;
+                waitingForOperand = true;
+                justCalculated = true;
+            }
+        }
+
+        function checkOperator(char) {
+            return ['+', '-', 'x', '/'].includes(char);
+        }
+
+        function clearCalculator() {
+            display.textContent = '0';
+            number1 = null;
+            number2 = null;
+            symbol = null;
+            waitingForOperand = false;
+            justCalculated = false;
+        }
+
+        function roundResult(result) {
+            // Round to 10 decimal places to avoid floating point issues
+            return Math.round(result * 10000000000) / 10000000000;
+        }
+
+        function operate(operator, a, b) {
+            switch(operator) {
+                case '+':
+                    return add(a, b);
+                case '-':
+                    return subtract(a, b);
+                case 'x':
+                    return multiply(a, b);
+                case '/':
+                    return divide(a, b);
+                default:
+                    return 0;
+            }
+        }
+
+        function add(a, b) {
+            return a + b;
+        }
+
+        function subtract(a, b) {
+            return a - b;
+        }
+
+        function multiply(a, b) {
+            return a * b;
+        }
+
+        function divide(a, b) {
+            if (b === 0) {
+                return "Error";
+            }
+            return a / b;
+        }
